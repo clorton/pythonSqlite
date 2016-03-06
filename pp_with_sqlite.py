@@ -4,6 +4,23 @@ import sqlite3
 import time
 
 
+class DbRow(object):
+
+    def __init__(self, row, columns):
+        self.row = row
+        self.columns = columns
+        pass
+
+    def __getitem__(self, item):
+        return self.row[self.columns.index(item)]
+
+    def __setitem__(self, key, value):
+        pass
+
+    def __delitem__(self, key):
+        pass
+
+
 def main(filename):
 
     # http://stackoverflow.com/questions/2887878/importing-a-csv-file-into-a-sqlite3-database-table-using-python
@@ -15,13 +32,35 @@ def main(filename):
         create_table('data', columns, cursor, connection)
         insert_data(f, 'data', columns, cursor, connection)
 
-        rows = select_data('Year = 1980 AND Gender = 0 AND Age >= 15 AND Age < 50', cursor)
-        print('Select returned {0} rows.'.format(len(rows)))
-        for i in range(0, 10):
-            print(rows[i])
+    c0 = time.clock()
+    rows = select_where('Year = 1980 AND Gender = 0 AND Age >= 15 AND Age < 50', cursor)
+#    # Year,Node_ID,ID,Age,Gender,CD4,StartingART
+#    rows = select_data('Year >= 2004 And Age >= 7300 And Age < 10950', cursor)
+    c1 = time.clock()
+    table = []
+    for row in rows:
+        table.append(DbRow(row, columns))
+    c2 = time.clock()
+    count = 0
+    sum = 0
+    for row in table:
+        sum += row['Age']
+        count += 1
+    c3 = time.clock()
+    average_age = sum / count
+    print('Select returned {0} rows.'.format(len(rows)))
+    for i in range(0, 10):
+        print(rows[i])
+    print('Average age: {0}'.format(average_age))
+    print('Query table:  {0}'.format(c1 - c0))
+    print('Create table: {0}'.format(c2 - c1))
+    print('Access table: {0}'.format(c3 - c2))
 
-        connection.close()
-        print(time.strftime('%H:%M:%S') + ' Closed database.')
+    rows = select('SELECT DISTINCT Year FROM data', cursor)
+    print('{0} distinct reporting years.'.format(len(rows)))
+
+    connection.close()
+    print(time.strftime('%H:%M:%S') + ' Closed database.')
 
     pass
 
@@ -63,13 +102,23 @@ def insert_data(source_file, table, columns, cursor, connection):
     pass
 
 
-def select_data(where, cursor):
+def select_where(where, cursor):
     cursor.execute("SELECT * FROM data WHERE {0}".format(where))
     rows = cursor.fetchall()
     print(time.strftime('%H:%M:%S') + ' Finished fetchall().')
 
     return rows
 
+
+def select(sql, cursor):
+    cursor.execute(sql)
+    rows = cursor.fetchall()
+    print(time.strftime('%H:%M:%S') + ' Finished select().')
+
+    return rows
+
+
 if __name__ == '__main__':
-    main('output/ReportHIVByAgeAndGender.csv')
+    main('ReportHIVByAgeAndGender.csv')
+#    main('ReportHIVART.csv')
     pass
